@@ -4,6 +4,18 @@ A javascript & webgl voxel path tracer. See it live [here](https://wwwtyro.githu
 
 ![vixel screenshot](media/screenshot-000.png)
 
+## Materials
+
+Vixel currently describes materials in terms of their _metalness_ and their _roughness_.
+
+| Roughness| Metalness | Real world analogue | Rendered example |
+|-|-|-|-|
+| 0.0 | 0.0 | Smooth plastic | ![thing](media/material-000.png) |
+| 1.0 | 0.0 | Chalk | ![thing](media/material-001.png) |
+| 0.0 | 1.0 | Mirror | ![thing](media/material-003.png) |
+| 1.0 | 0.1 | Unpolished metal | ![thing](media/material-002.png) |
+
+
 ## FAQ
 
 **The image is converging very slowly. How can I speed it up?**
