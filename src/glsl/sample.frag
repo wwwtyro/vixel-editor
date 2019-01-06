@@ -226,7 +226,7 @@ void main() {
         mask *= vd.rgb;
       } else {
         // nonmetallic
-        const float F0 = 0.0;
+        const float F0 = 0.04;
         float F = F0 + (1.0 - F0) * pow(1.0 - dot(-r, n), 5.0);
         if (randUniform1(randOffset) <= F) {
           // reflect
