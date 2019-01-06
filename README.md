@@ -13,7 +13,7 @@ Vixel currently describes materials in terms of their _metalness_ and their _rou
 | 0.0 | 0.0 | Smooth plastic | ![thing](media/material-000.png) |
 | 1.0 | 0.0 | Chalk | ![thing](media/material-001.png) |
 | 0.0 | 1.0 | Mirror | ![thing](media/material-002.png) |
-| 1.0 | 0.1 | Unpolished metal | ![thing](media/material-003.png) |
+| 1.0 | 0.05 | Unpolished metal | ![thing](media/material-003.png) |
 
 
 ## FAQ
