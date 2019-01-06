@@ -183,7 +183,7 @@ const controls = new function() {
   };
   this.save = function() {
     const hash = `#${pack()}`;
-    clip(`${location.origin}/${hash}`);
+    clip(location.href + hash);
     location.hash = hash;
   };
   this.clear = function() {
