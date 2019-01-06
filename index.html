@@ -1,0 +1,99 @@
+
+<html>
+    <head>
+      <script src='static/bundle.js' defer></script>
+      <style>
+        body {
+          background: #333;
+          font-family: sans;
+          color: white;
+          font-size: 90%;
+        }
+        table {
+          border-collapse: collapse;
+        }
+        a {
+          color: white;
+        }
+        .no-user-select {
+          user-select: none;
+          -webkit-user-select: none;
+          -ms-user-select: none;
+          -webkit-touch-callout: none;
+          -o-user-select: none;
+          -moz-user-select: none;
+        }
+        .center {
+          position: fixed;
+          width: 100%;
+          height: 100%;
+          top: 0px;
+          left: 0px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        #stats {
+          position: fixed;
+          bottom: 8px;
+          right: 8px;
+          background: rgba(0,0,0,0.8);
+          color: white;
+          border-radius: 3px;
+          padding: 8px;
+        }
+        #help-button {
+          position: fixed;
+          bottom: 8px;
+          left: 8px;
+          color: white;
+          background: rgba(0,0,0,0.8);
+          border-radius: 128px;
+          padding: 8px;
+          cursor: pointer;
+        }
+        #help {
+          position: fixed;
+          bottom: 8px;
+          left: 8px;
+          background: rgba(0,0,0,0.8);
+          border-radius: 3px;
+          padding: 8px;
+          font-size: 80%;
+          display: none;
+        }
+        #help table {
+          font-size: inherit;
+        }
+        #help td {
+          font-size: inherit;
+          color: white;
+          padding: 4px;
+        }
+        #help tr {
+          border-top: 1px dotted gray;
+        }
+      </style>
+    </head>
+    <body>
+      <div class='center'>
+        <canvas id='render-canvas'></canvas>
+      </div>
+      <div id='stats' class='no-user-select'></div>
+      <div id='help'>
+        <div style='width: 100%; cursor: pointer; text-align: right'>✖</div>
+        <br>
+        <table>
+          <tr><td>Left mouse button</td><td>Place voxel</td></tr>
+          <tr><td>Shift + left mouse button</td><td>Remove voxel</td></tr>
+          <tr><td>Control + left mouse button</td><td>Copy voxel</td></tr>
+          <tr><td>Right mouse button + drag</td><td>Rotate camera</td></tr>
+          <tr><td>Mouse wheel</td><td>Zoom</td></tr>
+          <tr><td>H key</td><td>Hide/show controls</td></tr>
+        </table>
+        <br>
+        <a href='https://github.com/wwwtyro/vixel' target='_blank'>More information</a>
+      </div>
+      <div id='help-button'>?</div>
+    </body>
+</html>
