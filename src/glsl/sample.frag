@@ -81,7 +81,6 @@ vec2 samplePoint(vec3 v) {
 
 
 bool hitVoxel(vec3 v) {
-  if (!inBounds(v)) return false;
   vec2 s = samplePoint(v);
   return texture2D(tRGBE, s).a == 1.0;
 }
@@ -117,41 +116,33 @@ bool intersect(vec3 r0, vec3 r, out vec3 v) {
     if (r.y >= 0.0) {
       return false;
     }
-    v = floor(r0 - r * r0.y/r.y + r * epsilon);
+    v = floor(r0 + r * -r0.y/r.y + r * epsilon);
+    v.y = -1.0;
     return true;
   }
-  r0 = r0 + r * tBounds;
+  r0 = r0 + r * tBounds + r * epsilon;
   v = floor(r0);
   vec3 stp = sign(r);
   vec3 tDelta = 1.0 / abs(r);
   vec3 tMax = step(0.0, r) * (1.0 - fract(r0)) + (1.0 - step(0.0, r)) * fract(r0);
   tMax = tMax/abs(r);
   for (int i = 0; i < 8192; i++) {
-    if (hitVoxel(v)) return true;
-    if (tMax.x < tMax.y) {
-      if (tMax.x < tMax.z) {
-        v.x += stp.x;
-        tMax.x += tDelta.x;
-      } else {
-        v.z += stp.z;
-        tMax.z += tDelta.z;
-      }
-    } else {
-      if (tMax.y <= tMax.z) {
-        v.y += stp.y;
-        tMax.y += tDelta.y;
-      } else {
-        v.z += stp.z;
-        tMax.z += tDelta.z;
-      }
-    }
     if (!inBounds(v)) {
       if (r.y >= 0.0) {
         return false;
       }
-      v = floor(r0 - r * r0.y/r.y + r * epsilon);
+      v = floor(r0 + r * -r0.y/r.y + r * epsilon);
+      v.y = -1.0;
       return true;
     }
+    if (hitVoxel(v)) return true;
+    vec3 s = vec3(
+      step(tMax.x, tMax.y) * step(tMax.x, tMax.z),
+      step(tMax.y, tMax.x) * step(tMax.y, tMax.z),
+      step(tMax.z, tMax.x) * step(tMax.z, tMax.y)
+    );
+    v += s * stp;
+    tMax += s * tDelta;
   }
   return false;
 }

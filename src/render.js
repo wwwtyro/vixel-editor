@@ -189,7 +189,7 @@ module.exports = function Renderer(canvas) {
         eye: camera.eye(),
         invpv: camera.invpv(),
         res: [canvas.width, canvas.height],
-        tOffset: vec2.random([]),
+        tOffset: [Math.random(), Math.random()],
         viewport: { x: 0, y: 0, width: canvas.width, height: canvas.height },
         tRGBE: stage.textures.rgbe,
         tFME: stage.textures.fme,
