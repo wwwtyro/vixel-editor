@@ -1,9 +1,9 @@
 precision highp float;
-uniform sampler2D source, tRGBE, tFME, t2Sphere, t3Sphere, tUniform2, tUniform1;
+uniform sampler2D tRGBE, tFME, tFrag, t2Sphere, t3Sphere, tUniform2, tUniform1;
 uniform samplerCube tSky;
 uniform mat4 invpv;
 uniform vec3 eye, bounds, lightPosition, lightColor, groundColor;
-uniform vec2 res, tOffset, invResRand;
+uniform vec2 res, tOffset, invResRand, resFrag;
 uniform float resStage, lightRadius, groundRoughness, groundMetalness;
 
 const float epsilon = 0.0001;
@@ -16,7 +16,7 @@ float randUniform1(inout vec2 randOffset) {
 }
 
 vec2 randUniform2(inout vec2 randOffset) {
-  vec2 r = texture2D(tUniform1, randOffset + tOffset + gl_FragCoord.xy * invResRand).rg;
+  vec2 r = texture2D(tUniform1, randOffset + tOffset + gl_FragCoord.xy * invResRand).ra;
   randOffset += r;
   return r;
 }
@@ -169,17 +169,15 @@ vec3 skyColor(vec3 r0, vec3 r) {
 }
 
 void main() {
-
-  // Get the incoming value.
-  vec2 invres = 1.0/res;
-  vec4 src = texture2D(source, gl_FragCoord.xy * invres);
+  // Get the fragment coordinate from our fragment buffer.
+  vec2 fragCoord = texture2D(tFrag, gl_FragCoord.xy / resFrag).xy;
 
   vec2 randOffset = vec2(0.0);
 
   // Recover NDC
   vec2 jitter = randUniform2(randOffset) - 0.5;
   vec4 ndc = vec4(
-    2.0 * (gl_FragCoord.xy + jitter) * invres - 1.0,
+    2.0 * (fragCoord + jitter) / res - 1.0,
     2.0 * gl_FragCoord.z - 1.0,
     1.0
   );
@@ -248,5 +246,5 @@ void main() {
     }
   }
 
-  gl_FragColor = src + vec4(accm, 1);
+  gl_FragColor = vec4(accm, 1);
 }

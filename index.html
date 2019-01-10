@@ -48,19 +48,20 @@
           left: 8px;
           color: white;
           background: rgba(0,0,0,0.8);
-          border-radius: 128px;
+          border-radius: 5px;
           padding: 8px;
           cursor: pointer;
+          color: lime;
         }
         #help {
-          position: fixed;
-          bottom: 8px;
-          left: 8px;
           background: rgba(0,0,0,0.8);
           border-radius: 3px;
           padding: 8px;
           font-size: 80%;
           display: none;
+          position: fixed;
+          bottom: 8px;
+          left: 8px;
         }
         #help table {
           font-size: inherit;
@@ -69,9 +70,12 @@
           font-size: inherit;
           color: white;
           padding: 4px;
+          padding-left: 0px;
+          padding-right: 8px;
         }
         #help tr {
-          border-top: 1px dotted gray;
+          border-top: 1px solid gray;
+          border-bottom: 1px solid gray;
         }
       </style>
     </head>
@@ -81,8 +85,10 @@
       </div>
       <div id='stats' class='no-user-select'></div>
       <div id='help'>
-        <div style='width: 100%; cursor: pointer; text-align: right'>✖</div>
+        <div style='width: 100%; cursor: pointer; text-align: right; color: lime'>✖</div>
         <br>
+        Controls
+        <br><br>
         <table>
           <tr><td>Left mouse button</td><td>Place voxel</td></tr>
           <tr><td>Shift + left mouse button</td><td>Remove voxel</td></tr>
@@ -94,6 +100,6 @@
         <br>
         <a href='https://github.com/wwwtyro/vixel' target='_blank'>More information</a>
       </div>
-      <div id='help-button'>?</div>
+      <div id='help-button'>help</div>
     </body>
 </html>

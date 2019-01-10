@@ -19,6 +19,23 @@ const renderer = Renderer(canvas);
 const stage = Stage(renderer.context);
 const camera = new Camera(canvas);
 
+const samplings = {
+  "1/25": 1 / 25,
+  "1/16": 1 / 4,
+  "1/9": 1 / 3,
+  "1/4": 1 / 2,
+  "1 ": 1,
+  "2 ": 2,
+  "3 ": 3,
+  "4 ": 4,
+  "5 ": 5,
+  "6 ": 6,
+  "7 ": 7,
+  "8 ": 8,
+  "9 ": 9,
+  "10 ": 10
+};
+
 const mouse = {
   left: false,
   right: false,
@@ -30,21 +47,18 @@ function toggleHelp() {
   const h = document.getElementById("help");
   const hb = document.getElementById("help-button");
   if (hb.style.display === "none") {
-    hb.style.display = "inline-block";
+    hb.style.display = "inline";
     h.style.display = "none";
   } else {
     hb.style.display = "none";
-    h.style.display = "inline-block";
+    h.style.display = "inline";
   }
 }
 
+toggleHelp();
+
 document.getElementById("help").addEventListener("click", toggleHelp);
 document.getElementById("help-button").addEventListener("click", toggleHelp);
-
-if (!localStorage.seenHelp) {
-  toggleHelp();
-  localStorage.seenHelp = true;
-}
 
 window.addEventListener("contextmenu", e => {
   e.preventDefault();
@@ -171,9 +185,9 @@ const controls = new function() {
   this.groundMetalness = 0.0;
   this.time = 6.06;
   this.azimuth = 0.0;
-  this.width = 960;
-  this.height = 540;
-  this.samplesPerFrame = 1;
+  this.width = 1280;
+  this.height = 720;
+  this.samplesPerFrame = "1/9";
   this.screenshot = function() {
     downloadCanvas("render-canvas", {
       name: "voxel",
@@ -280,11 +294,9 @@ gui.fRender
   .step(1)
   .onFinishChange(reflow);
 gui.fRender
-  .add(controls, "samplesPerFrame")
+  .add(controls, "samplesPerFrame", Object.keys(samplings))
   .name("Samples/Frame")
-  .min(1)
-  .max(256)
-  .step(1);
+  .onChange(configureSampling);
 gui.fRender.add(controls, "screenshot").name("Take Screenshot");
 
 gui.fScene.add(controls, "save").name("Copy URL");
@@ -314,6 +326,20 @@ function reflow() {
   } else {
     canvas.style.height = `${window.innerHeight}px`;
     canvas.style.width = `${Math.floor(aspect0 * window.innerHeight)}px`;
+  }
+  configureSampling();
+}
+
+function configureSampling() {
+  const scale = samplings[controls.samplesPerFrame];
+  if (scale < 1) {
+    renderer.setSampling(
+      Math.floor(canvas.width * scale),
+      Math.floor(canvas.height * scale),
+      1
+    );
+  } else {
+    renderer.setSampling(canvas.width, canvas.height, scale);
   }
 }
 
@@ -389,7 +415,7 @@ function loop() {
 
   document.getElementById(
     "stats"
-  ).innerText = `${renderer.sampleCount()} samples`;
+  ).innerText = `${renderer.sampleCount().toFixed(2)} samples`;
 
   requestAnimationFrame(loop);
 }

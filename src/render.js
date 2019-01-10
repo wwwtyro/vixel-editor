@@ -37,6 +37,18 @@ module.exports = function Renderer(canvas) {
     colorType: "float"
   });
 
+  const fboFrag = regl.framebuffer({
+    width: 128,
+    height: 128,
+    colorType: "float"
+  });
+
+  const fboSample = regl.framebuffer({
+    width: 128,
+    height: 128,
+    colorType: "float"
+  });
+
   const ndcBox = [-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1];
 
   const tRandSize = 1024;
@@ -108,7 +120,27 @@ module.exports = function Renderer(canvas) {
     });
   })();
 
-  let sampleCount = 0;
+  const cmdFrag = regl({
+    vert: glsl.file("./glsl/frag.vert"),
+    frag: glsl.file("./glsl/frag.frag"),
+    attributes: {
+      position: ndcBox
+    },
+    uniforms: {
+      resFrag: regl.prop("resFrag"),
+      resTarget: regl.prop("resTarget"),
+      randOffset: regl.prop("randOffset"),
+      tUniform2: tUniform2,
+      resRand: tRandSize
+    },
+    depth: {
+      enable: false,
+      mask: false
+    },
+    framebuffer: regl.prop("destination"),
+    viewport: regl.prop("viewport"),
+    count: 6
+  });
 
   const cmdSample = regl({
     vert: glsl.file("./glsl/sample.vert"),
@@ -121,6 +153,7 @@ module.exports = function Renderer(canvas) {
       invpv: regl.prop("invpv"),
       eye: regl.prop("eye"),
       res: regl.prop("res"),
+      resFrag: regl.prop("resFrag"),
       tSky: skyMap,
       tUniform1: tUniform1,
       tUniform2: tUniform2,
@@ -129,6 +162,7 @@ module.exports = function Renderer(canvas) {
       tOffset: regl.prop("tOffset"),
       tRGBE: regl.prop("tRGBE"),
       tFME: regl.prop("tFME"),
+      tFrag: regl.prop("tFrag"),
       resStage: regl.prop("resStage"),
       invResRand: [1 / tRandSize, 1 / tRandSize],
       lightPosition: regl.prop("lightPosition"),
@@ -138,6 +172,27 @@ module.exports = function Renderer(canvas) {
       groundRoughness: regl.prop("groundRoughness"),
       groundMetalness: regl.prop("groundMetalness"),
       bounds: regl.prop("bounds")
+    },
+    depth: {
+      enable: false,
+      mask: false
+    },
+    viewport: regl.prop("viewport"),
+    framebuffer: regl.prop("destination"),
+    count: 6
+  });
+
+  const cmdMerge = regl({
+    vert: glsl.file("./glsl/merge.vert"),
+    frag: glsl.file("./glsl/merge.frag"),
+    attributes: {
+      position: ndcBox
+    },
+    uniforms: {
+      source: regl.prop("source"),
+      tSample: regl.prop("tSample"),
+      tFrag: regl.prop("tFrag"),
+      res: regl.prop("res")
     },
     depth: {
       enable: false,
@@ -182,17 +237,43 @@ module.exports = function Renderer(canvas) {
     });
   }
 
+  let spf = 1;
+
+  function setSampling(width, height, samples) {
+    fboFrag({
+      width: width,
+      height: height,
+      colorType: "float"
+    });
+    fboSample({
+      width: width,
+      height: height,
+      colorType: "float"
+    });
+    spf = samples;
+  }
+
+  let sampleCount = 0;
+
   function sample(stage, camera, controls) {
     const b = stage.bounds();
-    for (let i = 0; i < controls.samplesPerFrame; i++) {
+    for (let i = 0; i < spf; i++) {
+      cmdFrag({
+        resFrag: [fboFrag.width, fboFrag.height],
+        resTarget: [canvas.width, canvas.height],
+        randOffset: [Math.random(), Math.random()],
+        viewport: { x: 0, y: 0, width: fboFrag.width, height: fboFrag.height },
+        destination: fboFrag
+      });
       cmdSample({
         eye: camera.eye(),
         invpv: camera.invpv(),
         res: [canvas.width, canvas.height],
+        resFrag: [fboFrag.width, fboFrag.height],
         tOffset: [Math.random(), Math.random()],
-        viewport: { x: 0, y: 0, width: canvas.width, height: canvas.height },
         tRGBE: stage.textures.rgbe,
         tFME: stage.textures.fme,
+        tFrag: fboFrag,
         resStage: stage.textures.size,
         bounds: [b.width, b.height, b.depth],
         lightPosition: sun.position,
@@ -202,17 +283,27 @@ module.exports = function Renderer(canvas) {
         groundColor: controls.groundColor.map(c => c / 255),
         groundMetalness: controls.groundMetalness,
         source: pingpong.ping(),
-        destination: pingpong.pong()
+        destination: fboSample,
+        viewport: { x: 0, y: 0, width: fboFrag.width, height: fboFrag.height }
+      });
+      cmdMerge({
+        source: pingpong.pong(),
+        res: [canvas.width, canvas.height],
+        tSample: fboSample,
+        tFrag: fboFrag,
+        viewport: { x: 0, y: 0, width: canvas.width, height: canvas.height },
+        destination: pingpong.ping()
       });
       pingpong.swap();
-      sampleCount++;
+      sampleCount +=
+        (fboFrag.width * fboFrag.height) / (canvas.width * canvas.height);
     }
   }
 
   function display() {
     regl.clear({ depth: 1, color: [0, 0, 0, 0] });
     cmdDisplay({
-      source: pingpong.ping(),
+      source: pingpong.pong(),
       viewport: { x: 0, y: 0, width: canvas.width, height: canvas.height }
     });
   }
@@ -243,9 +334,10 @@ module.exports = function Renderer(canvas) {
     sample: sample,
     display: display,
     reset: reset,
+    setSun: setSun,
+    setSampling: setSampling,
     sampleCount: function() {
       return sampleCount;
-    },
-    setSun: setSun
+    }
   };
 };

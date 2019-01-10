@@ -8,27 +8,23 @@ A javascript & webgl voxel path tracer. See it live [here](https://wwwtyro.githu
 
 Vixel currently describes materials in terms of their _metalness_ and their _roughness_.
 
-| Roughness| Metalness | Real world analogue | Rendered example |
-|-|-|-|-|
-| 0.0 | 0.0 | Smooth plastic | ![thing](media/material-000.png) |
-| 1.0 | 0.0 | Chalk | ![thing](media/material-001.png) |
-| 0.0 | 1.0 | Mirror | ![thing](media/material-002.png) |
-| 1.0 | 0.05 | Unpolished metal | ![thing](media/material-003.png) |
-
+| Roughness | Metalness | Real world analogue | Rendered example                 |
+| --------- | --------- | ------------------- | -------------------------------- |
+| 0.0       | 0.0       | Smooth plastic      | ![thing](media/material-000.png) |
+| 1.0       | 0.0       | Chalk               | ![thing](media/material-001.png) |
+| 0.0       | 1.0       | Mirror              | ![thing](media/material-002.png) |
+| 1.0       | 0.05      | Unpolished metal    | ![thing](media/material-003.png) |
 
 ## FAQ
 
 **The image is converging very slowly. How can I speed it up?**
 
-If your scene is being rendered at the refresh rate of your monitor (you're not GPU-bound), which in most cases would be 60FPS, you can increase the number of samples per frame to perform more work per frame.
-
-If you're already GPU-bound (i.e., interaction seems slow or choppy), you're already converging as fast as you can for the resolution you've selected. Your only option at this point is to reduce the resolution.
+Increase Samples/Frame. This is limited - if you become GPU bound (interaction becomes slow and choppy), increasing this value will not increase the convergence
+speed.
 
 **Interaction is slow or choppy. How can I make it smoother?**
 
-You can either reduce the number of samples per frame or you can reduce the resolution.
-
-A workflow on lower-end machines might be to reduce the samples per frame to one and decrease the resolution until the frame rate is acceptable for editing. When you're ready to render, bump up the resolution.
+Decrease Samples/Frame.
 
 **I see some weird artifacts. How can I fix them?**
 
