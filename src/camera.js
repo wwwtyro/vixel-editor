@@ -18,6 +18,18 @@ module.exports = class TrackballCamera {
     mat4.rotateX(this._rotation, this._rotation, -dy);
   }
 
+  up() {
+    const u = [0, 1, 0];
+    vec3.transformMat4(u, u, this._rotation);
+    return u;
+  }
+
+  right() {
+    const r = [1, 0, 0];
+    vec3.transformMat4(r, r, this._rotation);
+    return r;
+  }
+
   eye() {
     const e = [0, 0, this.radius];
     vec3.transformMat4(e, e, this._rotation);

@@ -4,9 +4,17 @@ A javascript & webgl voxel path tracer. See it live [here](https://wwwtyro.githu
 
 ![vixel screenshot](media/screenshot-000.png)
 
+![vixel screenshot](media/screenshot-001.png)
+
 ## Materials
 
-Vixel currently describes materials in terms of their _metalness_ and their _roughness_.
+- **Color** is the material's base color.
+
+- **Roughness** describes how randomly specular light is reflected from the surface.
+
+- **Metalness** describes how much of the light it reflects is diffusive. A purely metallic surface reflects zero light diffusively.
+
+- **Emission** is how much light the material emits. If this value is greater than zero, only the **color** component of the material is used.
 
 | Roughness | Metalness | Real world analogue | Rendered example                 |
 | --------- | --------- | ------------------- | -------------------------------- |
@@ -15,17 +23,33 @@ Vixel currently describes materials in terms of their _metalness_ and their _rou
 | 0.0       | 1.0       | Mirror              | ![thing](media/material-002.png) |
 | 1.0       | 0.05      | Unpolished metal    | ![thing](media/material-003.png) |
 
-## FAQ
+## Ground
 
-**The image is converging very slowly. How can I speed it up?**
+The **color**, **roughness**, and **metalness** properties can also be set for the ground plane, and are identical in meaning.
 
-Increase Samples/Frame. This is limited - if you become GPU bound (interaction becomes slow and choppy), increasing this value will not increase the convergence
-speed.
+## Sky
 
-**Interaction is slow or choppy. How can I make it smoother?**
+- **Time** is simply the time of day on a 24-hour clock. The sun rises at 6:00 and sets at 18:00.
 
-Decrease Samples/Frame.
+- **Azimuth** is the direction of the sun _around_ the up/down axis.
 
-**I see some weird artifacts. How can I fix them?**
+## Rendering
 
-You may have found a bug. Post an issue with a screenshot and the copied URL and I'll see what can be done about it.
+- **Width** and **Height** define the resolution of your rendered image.
+
+- **DOF Distance** is how far into your scene the focus plane lies.
+
+- **DOF Magnitude** is how strong the DOF effect is.
+
+- **Samples/Frame** describes how many samples are taken per frame. `1` is one sample per pixel, per frame. If the interactivity of the editor is slow or
+  choppy, you can reduce this to improve your framerate. Similarly, if you want to converge the scene faster, you can increase it (though increasing it is only
+  effective until you're GPU bound).
+
+- **Take Screenshot** will download a screenshot.
+
+## Scene
+
+- **Copy URL** copies the current scene to the clipboard and updates the URL. For now, this is the only way to save and share your scene. Feel free to paste it
+  into a text file to save it longer term. Yes, there are absolutely plans to improve this.
+
+- **Clear Scene** clears the scene of all voxels save one.

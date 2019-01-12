@@ -189,6 +189,8 @@ const controls = new function() {
   this.azimuth = 0.0;
   this.width = 1280;
   this.height = 720;
+  this.dofDist = 0.5;
+  this.dofMag = 0.0;
   this.samplesPerFrame = "1/9";
   this.screenshot = function() {
     downloadCanvas("render-canvas", {
@@ -296,6 +298,19 @@ gui.fRender
   .step(1)
   .onFinishChange(reflow);
 gui.fRender
+  .add(controls, "dofDist")
+  .name("DOF Distance")
+  .min(0.0)
+  .max(1.0)
+  .step(0.001)
+  .onChange(renderer.reset);
+gui.fRender
+  .add(controls, "dofMag")
+  .name("DOF Magnitude")
+  .min(0.0)
+  .step(0.01)
+  .onChange(renderer.reset);
+gui.fRender
   .add(controls, "samplesPerFrame", Object.keys(samplings))
   .name("Samples/Frame")
   .onChange(configureSampling);
@@ -359,6 +374,10 @@ function pack() {
       version: 0,
       time: controls.time,
       azimuth: controls.azimuth
+    },
+    dof: {
+      dist: controls.dofDist,
+      mag: controls.dofMag
     }
   };
   return jcb64.pack(data);
@@ -373,6 +392,8 @@ function unpack(d) {
   controls.groundColor = data.ground.color;
   controls.groundRoughness = data.ground.roughness;
   controls.groundMetalness = data.ground.metalness;
+  controls.dofDist = data.dof.dist;
+  controls.dofMag = data.dof.mag;
   gui.updateDisplay();
 }
 

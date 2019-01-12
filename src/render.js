@@ -56,7 +56,7 @@ module.exports = function Renderer(canvas) {
   const t2Sphere = (function() {
     const data = new Float32Array(tRandSize * tRandSize * 3);
     for (let i = 0; i < tRandSize * tRandSize; i++) {
-      let r = vec3.random([]);
+      const r = vec3.random([]);
       data[i * 3 + 0] = r[0];
       data[i * 3 + 1] = r[1];
       data[i * 3 + 2] = r[2];
@@ -74,7 +74,7 @@ module.exports = function Renderer(canvas) {
   const t3Sphere = (function() {
     const data = new Float32Array(tRandSize * tRandSize * 3);
     for (let i = 0; i < tRandSize * tRandSize; i++) {
-      let r = vec3.random([], Math.random());
+      const r = vec3.random([], Math.random());
       data[i * 3 + 0] = r[0];
       data[i * 3 + 1] = r[1];
       data[i * 3 + 2] = r[2];
@@ -163,6 +163,8 @@ module.exports = function Renderer(canvas) {
       tRGBE: regl.prop("tRGBE"),
       tFME: regl.prop("tFME"),
       tFrag: regl.prop("tFrag"),
+      dofDist: regl.prop("dofDist"),
+      dofMag: regl.prop("dofMag"),
       resStage: regl.prop("resStage"),
       invResRand: [1 / tRandSize, 1 / tRandSize],
       lightPosition: regl.prop("lightPosition"),
@@ -282,6 +284,8 @@ module.exports = function Renderer(canvas) {
         groundRoughness: controls.groundRoughness,
         groundColor: controls.groundColor.map(c => c / 255),
         groundMetalness: controls.groundMetalness,
+        dofDist: controls.dofDist,
+        dofMag: controls.dofMag,
         source: pingpong.ping(),
         destination: fboSample,
         viewport: { x: 0, y: 0, width: fboFrag.width, height: fboFrag.height }

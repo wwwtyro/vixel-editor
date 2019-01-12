@@ -4,7 +4,7 @@ uniform samplerCube tSky;
 uniform mat4 invpv;
 uniform vec3 eye, bounds, lightPosition, lightColor, groundColor;
 uniform vec2 res, tOffset, invResRand, resFrag;
-uniform float resStage, lightRadius, groundRoughness, groundMetalness;
+uniform float resStage, lightRadius, groundRoughness, groundMetalness, dofDist, dofMag;
 
 const float epsilon = 0.0001;
 const int nBounces = 3;
@@ -16,7 +16,7 @@ float randUniform1(inout vec2 randOffset) {
 }
 
 vec2 randUniform2(inout vec2 randOffset) {
-  vec2 r = texture2D(tUniform1, randOffset + tOffset + gl_FragCoord.xy * invResRand).ra;
+  vec2 r = texture2D(tUniform2, randOffset + tOffset + gl_FragCoord.xy * invResRand).ra;
   randOffset += r;
   return r;
 }
@@ -190,6 +190,11 @@ void main() {
 
   vec3 r = normalize(p3d - eye);
   vec3 r0 = eye;
+
+  float ddof = dofDist * length(bounds) + length(0.5 * bounds - eye) - length(bounds) * 0.5;
+  vec3 tdof = r0 + ddof * r;
+  r0 += rand2Sphere(randOffset) * dofMag;
+  r = normalize(tdof - r0);
 
   vec3 mask = vec3(1.0);
   vec3 accm = vec3(0.0);
