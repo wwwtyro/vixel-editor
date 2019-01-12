@@ -9,7 +9,6 @@ void main() {
   vec4 sample = texture2D(tSample, fc);
   vec2 frag = texture2D(tFrag, fc).xy;
   vec4 src = texture2D(source, fc);
-  float d = 1.0 / distance(gl_FragCoord.xy, frag);
   if (frag == gl_FragCoord.xy) {
     gl_FragColor = src + sample;
   } else {

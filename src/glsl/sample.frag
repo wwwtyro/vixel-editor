@@ -204,7 +204,7 @@ void main() {
       }
       float tVoxel = 0.0;
       rayAABB(r0, r, v, v + 1.0, tVoxel);
-      vec3 r1 = r0 + tVoxel * r;
+      vec3 r1 = r0 + tVoxel * r + r * epsilon;
       vec3 n = rayAABBNorm(r1, v);
       vec3 m = normalize(n + rand3Sphere(randOffset) * vd.roughness);
       vec3 diffuse = normalize(m + rand2Sphere(randOffset));

@@ -19,6 +19,8 @@ const renderer = Renderer(canvas);
 const stage = Stage(renderer.context);
 const camera = new Camera(canvas);
 
+camera.rotate(0.00001, 0.00001);
+
 const samplings = {
   "1/25": 1 / 25,
   "1/16": 1 / 4,
