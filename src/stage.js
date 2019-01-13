@@ -2,128 +2,52 @@
 
 const { vec3 } = require("gl-matrix");
 
-module.exports = function Stage(regl) {
-  let data = {};
-  let _bounds = calculateBounds();
+const VoxelIndex = require("./voxel-index");
 
-  const textures = {
-    rgbe: regl.texture(),
-    fme: regl.texture(),
-    size: 0
-  };
+module.exports = class Stage {
+  constructor(regl) {
+    this.regl = regl;
+    this.data = {};
+    this.vIndex = new VoxelIndex();
+    this.tIndex = regl.texture();
+    this.tRGB = regl.texture();
+    this.tRMET = regl.texture();
+  }
 
-  function key(x, y, z) {
+  key(x, y, z) {
     return `${x} ${y} ${z}`;
   }
 
-  function set(x, y, z, r, g, b, f, m, e) {
-    data[key(x, y, z)] = {
+  set(x, y, z, red, green, blue, rough, metal, emit, transparent) {
+    this.data[this.key(x, y, z)] = {
       x,
       y,
       z,
-      r: Math.round(r * 255),
-      g: Math.round(g * 255),
-      b: Math.round(b * 255),
-      f,
-      m,
-      e
+      red: Math.round(red * 255),
+      green: Math.round(green * 255),
+      blue: Math.round(blue * 255),
+      rough,
+      metal,
+      emit,
+      transparent
     };
   }
 
-  function unset(x, y, z) {
-    if (Object.keys(data).length === 1) return;
-    delete data[key(x, y, z)];
+  unset(x, y, z) {
+    if (Object.keys(this.data).length === 1) return;
+    delete this.data[this.key(x, y, z)];
   }
 
-  function get(x, y, z) {
-    return data[key(x, y, z)];
+  get(x, y, z) {
+    return this.data[this.key(x, y, z)];
   }
 
-  function clear() {
-    data = {};
+  clear() {
+    this.vIndex.clear();
+    this.data = {};
   }
 
-  function serialize() {
-    const out = {
-      version: 0
-    };
-    out.position = [];
-    out.albedo = [];
-    out.roughness = [];
-    out.metalness = [];
-    out.emission = [];
-    for (let [_, v] of Object.entries(data)) {
-      out.position.push(v.x, v.y, v.z);
-      out.albedo.push(v.r, v.g, v.b);
-      out.roughness.push(+v.f.toFixed(3));
-      out.metalness.push(+v.m.toFixed(3));
-      out.emission.push(+v.e.toFixed(3));
-    }
-    return out;
-  }
-
-  function deserialize(d) {
-    clear();
-    for (let i = 0; i < d.position.length / 3; i++) {
-      const x = d.position[i * 3 + 0];
-      const y = d.position[i * 3 + 1];
-      const z = d.position[i * 3 + 2];
-      const r = d.albedo[i * 3 + 0];
-      const g = d.albedo[i * 3 + 1];
-      const b = d.albedo[i * 3 + 2];
-      const f = d.roughness[i];
-      const m = d.metalness[i];
-      const e = d.emission[i];
-      set(x, y, z, r / 255, g / 255, b / 255, f, m, e);
-    }
-  }
-
-  function update() {
-    const b = calculateBounds();
-    _bounds = b;
-    const w = 1 + b.max.x - b.min.x;
-    const h = 1 + b.max.y - b.min.y;
-    const d = 1 + b.max.z - b.min.z;
-    let size = 1;
-    while (size * size < w * d * h) {
-      size *= 2;
-    }
-    const sx = -b.min.x;
-    const sy = -b.min.y;
-    const sz = -b.min.z;
-    const rgbeArray = new Uint8Array(size * size * 4);
-    rgbeArray.fill(0);
-    const fmeArray = new Float32Array(size * size * 4);
-    fmeArray.fill(0);
-    for (let [_, v] of Object.entries(data)) {
-      const i = (sy + v.y) * w * d + (sz + v.z) * w + (sx + v.x);
-      rgbeArray[i * 4 + 0] = v.r;
-      rgbeArray[i * 4 + 1] = v.g;
-      rgbeArray[i * 4 + 2] = v.b;
-      rgbeArray[i * 4 + 3] = 255;
-      fmeArray[i * 4 + 0] = v.f;
-      fmeArray[i * 4 + 1] = v.m;
-      fmeArray[i * 4 + 2] = v.e;
-    }
-    textures.rgbe({
-      width: size,
-      height: size,
-      data: rgbeArray
-    });
-    textures.fme({
-      width: size,
-      height: size,
-      data: fmeArray,
-      type: "float"
-    });
-    textures.size = size;
-  }
-
-  function bounds() {
-    return _bounds;
-  }
-
-  function calculateBounds() {
+  updateBounds() {
     const b = {
       min: {
         x: Infinity,
@@ -136,7 +60,7 @@ module.exports = function Stage(regl) {
         z: -Infinity
       }
     };
-    for (let [_, v] of Object.entries(data)) {
+    for (let [_, v] of Object.entries(this.data)) {
       b.min.x = Math.min(b.min.x, v.x);
       b.min.y = Math.min(b.min.y, v.y);
       b.min.z = Math.min(b.min.z, v.z);
@@ -147,10 +71,93 @@ module.exports = function Stage(regl) {
     b.width = 1 + b.max.x - b.min.x;
     b.height = 1 + b.max.y - b.min.y;
     b.depth = 1 + b.max.z - b.min.z;
-    return b;
+    this.bounds = b;
   }
 
-  function rayAABB(r0, r, v) {
+  update() {
+    this.updateBounds();
+    let size = 1;
+    while (
+      size * size <
+      this.bounds.width * this.bounds.height * this.bounds.depth
+    ) {
+      size *= 2;
+    }
+    const shiftX = -this.bounds.min.x;
+    const shiftY = -this.bounds.min.y;
+    const shiftZ = -this.bounds.min.z;
+    const aIndex = new Uint8Array(size * size * 2);
+    aIndex.fill(0);
+    for (let [_, v] of Object.entries(this.data)) {
+      const vi = this.vIndex.get(v);
+      const ai =
+        (shiftY + v.y) * this.bounds.width * this.bounds.depth +
+        (shiftZ + v.z) * this.bounds.width +
+        (shiftX + v.x);
+      aIndex[ai * 2 + 0] = vi[0];
+      aIndex[ai * 2 + 1] = vi[1];
+    }
+    this.tIndex({
+      width: size,
+      height: size,
+      format: "luminance alpha",
+      data: aIndex
+    });
+    this.tRGB({
+      width: 256,
+      height: 256,
+      format: "rgb",
+      data: this.vIndex.aRGB
+    });
+    this.tRMET({
+      width: 256,
+      height: 256,
+      format: "rgba",
+      type: "float",
+      data: this.vIndex.aRMET
+    });
+  }
+
+  serialize() {
+    const out = {
+      version: 0
+    };
+    out.xyz = [];
+    out.rgb = [];
+    out.rough = [];
+    out.metal = [];
+    out.emit = [];
+    out.transparent = [];
+    for (let [_, v] of Object.entries(this.data)) {
+      out.xyz.push(v.x, v.y, v.z);
+      out.rgb.push(v.red, v.green, v.blue);
+      out.rough.push(+v.rough.toFixed(3));
+      out.metal.push(+v.metal.toFixed(3));
+      out.emit.push(+v.emit.toFixed(3));
+      out.transparent.push(+v.transparent.toFixed(3));
+    }
+    return out;
+  }
+
+  deserialize(d) {
+    this.clear();
+    for (let i = 0; i < d.xyz.length / 3; i++) {
+      this.set(
+        d.xyz[i * 3 + 0],
+        d.xyz[i * 3 + 1],
+        d.xyz[i * 3 + 2],
+        d.rgb[i * 3 + 0] / 255,
+        d.rgb[i * 3 + 1] / 255,
+        d.rgb[i * 3 + 2] / 255,
+        d.rough[i],
+        d.metal[i],
+        d.emit[i],
+        d.transparent[i]
+      );
+    }
+  }
+
+  rayAABB(r0, r, v) {
     const bMin = v.slice();
     const bMax = vec3.add([], v, [1, 1, 1]);
     const invr = r.map(e => 1 / e);
@@ -166,7 +173,7 @@ module.exports = function Stage(regl) {
     return false;
   }
 
-  function intersect(r0, r) {
+  intersect(r0, r) {
     const v = r0.map(Math.floor);
     const stp = r.map(Math.sign);
     const tDelta = r.map(e => 1.0 / Math.abs(e));
@@ -196,27 +203,14 @@ module.exports = function Stage(regl) {
           tMax[2] += tDelta[2];
         }
       }
-      const gv = get(v[0], v[1], v[2]);
+      const gv = this.get(v[0], v[1], v[2]);
       if (gv) {
         return {
           voxel: v,
-          t: rayAABB(r0, r, v)
+          t: this.rayAABB(r0, r, v)
         };
       }
     }
     return undefined;
   }
-
-  return {
-    set,
-    unset,
-    get,
-    clear,
-    intersect,
-    update,
-    bounds,
-    serialize,
-    deserialize,
-    textures
-  };
 };

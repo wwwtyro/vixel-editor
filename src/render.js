@@ -160,8 +160,9 @@ module.exports = function Renderer(canvas) {
       t2Sphere: t2Sphere,
       t3Sphere: t3Sphere,
       tOffset: regl.prop("tOffset"),
-      tRGBE: regl.prop("tRGBE"),
-      tFME: regl.prop("tFME"),
+      tRGB: regl.prop("tRGB"),
+      tRMET: regl.prop("tRMET"),
+      tIndex: regl.prop("tIndex"),
       tFrag: regl.prop("tFrag"),
       dofDist: regl.prop("dofDist"),
       dofMag: regl.prop("dofMag"),
@@ -258,7 +259,7 @@ module.exports = function Renderer(canvas) {
   let sampleCount = 0;
 
   function sample(stage, camera, controls) {
-    const b = stage.bounds();
+    const b = stage.bounds;
     for (let i = 0; i < spf; i++) {
       cmdFrag({
         resFrag: [fboFrag.width, fboFrag.height],
@@ -273,10 +274,11 @@ module.exports = function Renderer(canvas) {
         res: [canvas.width, canvas.height],
         resFrag: [fboFrag.width, fboFrag.height],
         tOffset: [Math.random(), Math.random()],
-        tRGBE: stage.textures.rgbe,
-        tFME: stage.textures.fme,
+        tRGB: stage.tRGB,
+        tRMET: stage.tRMET,
+        tIndex: stage.tIndex,
         tFrag: fboFrag,
-        resStage: stage.textures.size,
+        resStage: stage.tIndex.width,
         bounds: [b.width, b.height, b.depth],
         lightPosition: sun.position,
         lightColor: sun.color,

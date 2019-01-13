@@ -1,5 +1,5 @@
 precision highp float;
-uniform sampler2D tRGBE, tFME, tFrag, t2Sphere, t3Sphere, tUniform2, tUniform1;
+uniform sampler2D tRGB, tRMET, tIndex, tFrag, t2Sphere, t3Sphere, tUniform2, tUniform1;
 uniform samplerCube tSky;
 uniform mat4 invpv;
 uniform vec3 eye, bounds, lightPosition, lightColor, groundColor;
@@ -82,7 +82,7 @@ vec2 samplePoint(vec3 v) {
 
 bool hitVoxel(vec3 v) {
   vec2 s = samplePoint(v);
-  return texture2D(tRGBE, s).a == 1.0;
+  return texture2D(tIndex, s).ra != vec2(0.0, 0.0);
 }
 
 struct VoxelData {
@@ -90,6 +90,7 @@ struct VoxelData {
   float roughness;
   float metalness;
   float emission;
+  float transparent;
 };
 
 VoxelData voxelData(vec3 v) {
@@ -99,14 +100,17 @@ VoxelData voxelData(vec3 v) {
     vd.roughness = groundRoughness;
     vd.metalness = groundMetalness;
     vd.emission = 0.0;
+    vd.transparent = 0.0;
     return vd;
   }
   vec2 s = samplePoint(v);
-  vd.rgb = texture2D(tRGBE, s).rgb;
-  vec3 fme = texture2D(tFME, s).rgb;
-  vd.roughness = fme.r;
-  vd.metalness = fme.g;
-  vd.emission = fme.b * 10.0;
+  vec2 i = texture2D(tIndex, s).ra;
+  vd.rgb = texture2D(tRGB, i).rgb;
+  vec4 rmet = texture2D(tRMET, i);
+  vd.roughness = rmet.r;
+  vd.metalness = rmet.g;
+  vd.emission = rmet.b * 10.0;
+  vd.transparent = rmet.a;
   return vd;
 }
 
@@ -209,7 +213,7 @@ void main() {
       }
       float tVoxel = 0.0;
       rayAABB(r0, r, v, v + 1.0, tVoxel);
-      vec3 r1 = r0 + tVoxel * r + r * epsilon;
+      vec3 r1 = r0 + tVoxel * r;
       vec3 n = rayAABBNorm(r1, v);
       vec3 m = normalize(n + rand3Sphere(randOffset) * vd.roughness);
       vec3 diffuse = normalize(m + rand2Sphere(randOffset));

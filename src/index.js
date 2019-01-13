@@ -16,7 +16,7 @@ canvas.width = canvas.clientWidth;
 canvas.height = canvas.clientHeight;
 
 const renderer = Renderer(canvas);
-const stage = Stage(renderer.context);
+const stage = new Stage(renderer.context);
 const camera = new Camera(canvas);
 
 camera.rotate(0.00001, 0.00001);
@@ -72,7 +72,7 @@ canvas.addEventListener("mousedown", e => {
     mouse.left = true;
     mouse.x = e.clientX;
     mouse.y = e.clientY;
-    const b = stage.bounds();
+    const b = stage.bounds;
     camera.center = [
       b.width / 2 + b.min.x,
       b.height / 2 + b.min.y,
@@ -109,7 +109,8 @@ canvas.addEventListener("mousedown", e => {
           controls.color[2] / 255,
           controls.roughness,
           controls.metalness,
-          controls.emission
+          controls.emission,
+          0
         );
         stage.update();
         renderer.reset();
@@ -121,10 +122,10 @@ canvas.addEventListener("mousedown", e => {
         renderer.reset();
       } else if (e.ctrlKey) {
         const vd = stage.get(v.voxel[0], v.voxel[1], v.voxel[2]);
-        controls.roughness = vd.f;
-        controls.metalness = vd.m;
-        controls.emission = vd.e;
-        controls.color = [vd.r, vd.g, vd.b];
+        controls.roughness = vd.rough;
+        controls.metalness = vd.metal;
+        controls.emission = vd.emit;
+        controls.color = [vd.red, vd.green, vd.blue];
         gui.updateDisplay();
       } else {
         const p = vec3.add([], r0, vec3.scale([], r, v.t - 0.001));
@@ -138,7 +139,8 @@ canvas.addEventListener("mousedown", e => {
           controls.color[2] / 255,
           controls.roughness,
           controls.metalness,
-          controls.emission
+          controls.emission,
+          0
         );
         stage.update();
         renderer.reset();
@@ -206,7 +208,7 @@ const controls = new function() {
   };
   this.clear = function() {
     stage.clear();
-    stage.set(0, 0, 0, 0.5, 0.5, 0.5, 0, 0, 0);
+    stage.set(0, 0, 0, 0.5, 0.5, 0.5, 0, 0, 0, 0);
     stage.update();
     renderer.reset();
   };
@@ -407,7 +409,7 @@ if (location.hash) {
   let x = 0;
   let y = 0;
   let z = 0;
-  stage.set(x, y, z, 1, 1, 1, 1, 0, 0);
+  stage.set(x, y, z, 1, 1, 1, 1, 0, 0, 0);
   for (let i = 0; i < 10000; i++) {
     const n = [[1, 0], [-1, 0], [0, 1], [0, -1]][Math.floor(Math.random() * 4)];
     const x1 = x + n[0];
@@ -416,10 +418,10 @@ if (location.hash) {
     x = x1;
     z = z1;
     let rgb = [1, 1, 1];
-    stage.set(x, y, z, ...rgb, 1, 0, Math.random() < 0.1 ? 0.1 : 0.0);
+    stage.set(x, y, z, ...rgb, 1, 0, Math.random() < 0.1 ? 0.1 : 0.0, 0);
     while (stage.get(x, y - 1, z) === undefined && y > 0) {
       y--;
-      stage.set(x, y, z, 1, 1, 1, 1, 0, 0);
+      stage.set(x, y, z, 1, 1, 1, 1, 0, 0, 0);
     }
   }
 }
@@ -430,7 +432,7 @@ renderer.reset();
 stage.update();
 
 function loop() {
-  const b = stage.bounds();
+  const b = stage.bounds;
   camera.center = vec3.scale([], [b.width, b.height, b.depth], 0.5);
   camera.radius = vec3.length([b.width, b.height, b.depth]) * 1.5;
   renderer.sample(stage, camera, controls);
