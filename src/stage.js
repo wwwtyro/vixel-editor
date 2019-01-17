@@ -12,13 +12,14 @@ module.exports = class Stage {
     this.tIndex = regl.texture();
     this.tRGB = regl.texture();
     this.tRMET = regl.texture();
+    this.tRi = regl.texture();
   }
 
   key(x, y, z) {
     return `${x} ${y} ${z}`;
   }
 
-  set(x, y, z, red, green, blue, rough, metal, emit, transparent) {
+  set(x, y, z, red, green, blue, rough, metal, emit, transparent, ri) {
     this.data[this.key(x, y, z)] = {
       x,
       y,
@@ -29,7 +30,8 @@ module.exports = class Stage {
       rough,
       metal,
       emit,
-      transparent
+      transparent,
+      ri
     };
   }
 
@@ -116,6 +118,13 @@ module.exports = class Stage {
       type: "float",
       data: this.vIndex.aRMET
     });
+    this.tRi({
+      width: 256,
+      height: 256,
+      format: "rgba",
+      type: "float",
+      data: this.vIndex.aRi
+    });
   }
 
   serialize() {
@@ -128,6 +137,7 @@ module.exports = class Stage {
     out.metal = [];
     out.emit = [];
     out.transparent = [];
+    out.ri = [];
     for (let [_, v] of Object.entries(this.data)) {
       out.xyz.push(v.x, v.y, v.z);
       out.rgb.push(v.red, v.green, v.blue);
@@ -135,6 +145,7 @@ module.exports = class Stage {
       out.metal.push(+v.metal.toFixed(3));
       out.emit.push(+v.emit.toFixed(3));
       out.transparent.push(+v.transparent.toFixed(3));
+      out.ri.push(+v.ri.toFixed(3));
     }
     return out;
   }
@@ -152,7 +163,8 @@ module.exports = class Stage {
         d.rough[i],
         d.metal[i],
         d.emit[i],
-        d.transparent[i]
+        d.transparent[i],
+        d.ri[i]
       );
     }
   }

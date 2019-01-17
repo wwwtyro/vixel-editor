@@ -15,19 +15,16 @@ module.exports = function Renderer(canvas) {
     }
   });
 
-  const sun = {
-    position: vec3.scale(
-      [],
-      vec3.normalize([], [1.11, -0.0, 0.25]),
-      150000000000
-    ),
-    color: [1, 1, 1],
-    radius: 695508000 * 3
-  };
+  const sunDistance = 149600000000;
+  let sunPosition = vec3.scale(
+    [],
+    vec3.normalize([], [1.11, -0.0, 0.25]),
+    sunDistance
+  );
 
   const renderAtmosphere = createAtmosphereRenderer(regl);
   const skyMap = renderAtmosphere({
-    sunDirection: vec3.normalize([], sun.position),
+    sunDirection: vec3.normalize([], sunPosition),
     resolution: 1024
   });
 
@@ -37,15 +34,9 @@ module.exports = function Renderer(canvas) {
     colorType: "float"
   });
 
-  const fboFrag = regl.framebuffer({
-    width: 128,
-    height: 128,
-    colorType: "float"
-  });
-
-  const fboSample = regl.framebuffer({
-    width: 128,
-    height: 128,
+  const fboPreview = regl.framebuffer({
+    width: canvas.width,
+    height: canvas.height,
     colorType: "float"
   });
 
@@ -120,28 +111,6 @@ module.exports = function Renderer(canvas) {
     });
   })();
 
-  const cmdFrag = regl({
-    vert: glsl.file("./glsl/frag.vert"),
-    frag: glsl.file("./glsl/frag.frag"),
-    attributes: {
-      position: ndcBox
-    },
-    uniforms: {
-      resFrag: regl.prop("resFrag"),
-      resTarget: regl.prop("resTarget"),
-      randOffset: regl.prop("randOffset"),
-      tUniform2: tUniform2,
-      resRand: tRandSize
-    },
-    depth: {
-      enable: false,
-      mask: false
-    },
-    framebuffer: regl.prop("destination"),
-    viewport: regl.prop("viewport"),
-    count: 6
-  });
-
   const cmdSample = regl({
     vert: glsl.file("./glsl/sample.vert"),
     frag: glsl.file("./glsl/sample.frag"),
@@ -162,40 +131,20 @@ module.exports = function Renderer(canvas) {
       tOffset: regl.prop("tOffset"),
       tRGB: regl.prop("tRGB"),
       tRMET: regl.prop("tRMET"),
+      tRi: regl.prop("tRi"),
       tIndex: regl.prop("tIndex"),
-      tFrag: regl.prop("tFrag"),
       dofDist: regl.prop("dofDist"),
       dofMag: regl.prop("dofMag"),
       resStage: regl.prop("resStage"),
       invResRand: [1 / tRandSize, 1 / tRandSize],
       lightPosition: regl.prop("lightPosition"),
-      lightColor: regl.prop("lightColor"),
+      lightIntensity: regl.prop("lightIntensity"),
       lightRadius: regl.prop("lightRadius"),
       groundColor: regl.prop("groundColor"),
       groundRoughness: regl.prop("groundRoughness"),
       groundMetalness: regl.prop("groundMetalness"),
-      bounds: regl.prop("bounds")
-    },
-    depth: {
-      enable: false,
-      mask: false
-    },
-    viewport: regl.prop("viewport"),
-    framebuffer: regl.prop("destination"),
-    count: 6
-  });
-
-  const cmdMerge = regl({
-    vert: glsl.file("./glsl/merge.vert"),
-    frag: glsl.file("./glsl/merge.frag"),
-    attributes: {
-      position: ndcBox
-    },
-    uniforms: {
-      source: regl.prop("source"),
-      tSample: regl.prop("tSample"),
-      tFrag: regl.prop("tFrag"),
-      res: regl.prop("res")
+      bounds: regl.prop("bounds"),
+      renderPreview: regl.prop("renderPreview")
     },
     depth: {
       enable: false,
@@ -214,6 +163,8 @@ module.exports = function Renderer(canvas) {
     },
     uniforms: {
       source: regl.prop("source"),
+      preview: regl.prop("preview"),
+      fraction: regl.prop("fraction"),
       tUniform1: tUniform1,
       tUniform1Res: [tUniform1.width, tUniform1.height]
     },
@@ -225,91 +176,65 @@ module.exports = function Renderer(canvas) {
     count: 6
   });
 
-  function setSun(time, azimuth) {
+  function calculateSunPosition(time, azimuth) {
     const theta = (2 * Math.PI * (time - 6)) / 24;
-    const phi = azimuth;
-    const r = 150000000000;
-    sun.position = [
-      r * Math.cos(phi) * Math.cos(theta),
-      r * Math.sin(theta),
-      r * Math.sin(phi) * Math.cos(theta)
+    return [
+      sunDistance * Math.cos(azimuth) * Math.cos(theta),
+      sunDistance * Math.sin(theta),
+      sunDistance * Math.sin(azimuth) * Math.cos(theta)
     ];
-    renderAtmosphere({
-      sunDirection: vec3.normalize([], sun.position),
-      cubeFBO: skyMap
-    });
-  }
-
-  let spf = 1;
-
-  function setSampling(width, height, samples) {
-    fboFrag({
-      width: width,
-      height: height,
-      colorType: "float"
-    });
-    fboSample({
-      width: width,
-      height: height,
-      colorType: "float"
-    });
-    spf = samples;
   }
 
   let sampleCount = 0;
 
   function sample(stage, camera, controls) {
-    const b = stage.bounds;
-    for (let i = 0; i < spf; i++) {
-      cmdFrag({
-        resFrag: [fboFrag.width, fboFrag.height],
-        resTarget: [canvas.width, canvas.height],
-        randOffset: [Math.random(), Math.random()],
-        viewport: { x: 0, y: 0, width: fboFrag.width, height: fboFrag.height },
-        destination: fboFrag
+    const sp = calculateSunPosition(controls.time, controls.azimuth);
+    if (vec3.distance(sp, sunPosition) > 0.001) {
+      sunPosition = sp;
+      renderAtmosphere({
+        sunDirection: vec3.normalize([], sunPosition),
+        cubeFBO: skyMap
       });
+    }
+    const b = stage.bounds;
+    for (let i = 0; i < controls.samplesPerFrame; i++) {
       cmdSample({
         eye: camera.eye(),
         invpv: camera.invpv(),
         res: [canvas.width, canvas.height],
-        resFrag: [fboFrag.width, fboFrag.height],
         tOffset: [Math.random(), Math.random()],
         tRGB: stage.tRGB,
         tRMET: stage.tRMET,
+        tRi: stage.tRi,
         tIndex: stage.tIndex,
-        tFrag: fboFrag,
         resStage: stage.tIndex.width,
         bounds: [b.width, b.height, b.depth],
-        lightPosition: sun.position,
-        lightColor: sun.color,
-        lightRadius: sun.radius,
+        lightPosition: sunPosition,
+        lightIntensity: controls.lightIntensity,
+        lightRadius: 695508000 * controls.lightRadius,
         groundRoughness: controls.groundRoughness,
         groundColor: controls.groundColor.map(c => c / 255),
         groundMetalness: controls.groundMetalness,
         dofDist: controls.dofDist,
         dofMag: controls.dofMag,
+        renderPreview: sampleCount === 0,
         source: pingpong.ping(),
-        destination: fboSample,
-        viewport: { x: 0, y: 0, width: fboFrag.width, height: fboFrag.height }
+        destination: sampleCount === 0 ? fboPreview : pingpong.pong(),
+        viewport: { x: 0, y: 0, width: canvas.width, height: canvas.height }
       });
-      cmdMerge({
-        source: pingpong.pong(),
-        res: [canvas.width, canvas.height],
-        tSample: fboSample,
-        tFrag: fboFrag,
-        viewport: { x: 0, y: 0, width: canvas.width, height: canvas.height },
-        destination: pingpong.ping()
-      });
-      pingpong.swap();
-      sampleCount +=
-        (fboFrag.width * fboFrag.height) / (canvas.width * canvas.height);
+      if (sampleCount > 0) {
+        pingpong.swap();
+      }
+      sampleCount++;
+      if (sampleCount === 1) break;
     }
   }
 
   function display() {
-    regl.clear({ depth: 1, color: [0, 0, 0, 0] });
     cmdDisplay({
-      source: pingpong.pong(),
+      source: pingpong.ping(),
+      preview: fboPreview,
+      fraction: Math.min(1.0, sampleCount / 128),
       viewport: { x: 0, y: 0, width: canvas.width, height: canvas.height }
     });
   }
@@ -329,9 +254,15 @@ module.exports = function Renderer(canvas) {
         height: canvas.height,
         colorType: "float"
       });
+      fboPreview({
+        width: canvas.width,
+        height: canvas.height,
+        colorType: "float"
+      });
     }
     regl.clear({ color: [0, 0, 0, 0], framebuffer: pingpong.ping() });
     regl.clear({ color: [0, 0, 0, 0], framebuffer: pingpong.pong() });
+    regl.clear({ color: [0, 0, 0, 0], framebuffer: fboPreview });
     sampleCount = 0;
   }
 
@@ -340,8 +271,6 @@ module.exports = function Renderer(canvas) {
     sample: sample,
     display: display,
     reset: reset,
-    setSun: setSun,
-    setSampling: setSampling,
     sampleCount: function() {
       return sampleCount;
     }

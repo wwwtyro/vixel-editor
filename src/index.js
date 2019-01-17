@@ -19,24 +19,7 @@ const renderer = Renderer(canvas);
 const stage = new Stage(renderer.context);
 const camera = new Camera(canvas);
 
-camera.rotate(0.00001, 0.00001);
-
-const samplings = {
-  "1/25": 1 / 25,
-  "1/16": 1 / 4,
-  "1/9": 1 / 3,
-  "1/4": 1 / 2,
-  "1 ": 1,
-  "2 ": 2,
-  "3 ": 3,
-  "4 ": 4,
-  "5 ": 5,
-  "6 ": 6,
-  "7 ": 7,
-  "8 ": 8,
-  "9 ": 9,
-  "10 ": 10
-};
+camera.rotate(1, 0.2);
 
 const mouse = {
   left: false,
@@ -110,7 +93,8 @@ canvas.addEventListener("mousedown", e => {
           controls.roughness,
           controls.metalness,
           controls.emission,
-          0
+          controls.transparent,
+          controls.ri
         );
         stage.update();
         renderer.reset();
@@ -126,6 +110,8 @@ canvas.addEventListener("mousedown", e => {
         controls.metalness = vd.metal;
         controls.emission = vd.emit;
         controls.color = [vd.red, vd.green, vd.blue];
+        controls.transparent = vd.transparent;
+        controls.ri = vd.ri;
         gui.updateDisplay();
       } else {
         const p = vec3.add([], r0, vec3.scale([], r, v.t - 0.001));
@@ -140,7 +126,8 @@ canvas.addEventListener("mousedown", e => {
           controls.roughness,
           controls.metalness,
           controls.emission,
-          0
+          controls.transparent,
+          controls.ri
         );
         stage.update();
         renderer.reset();
@@ -184,16 +171,21 @@ const controls = new function() {
   this.roughness = 0.0;
   this.metalness = 0.0;
   this.emission = 0.0;
-  this.groundColor = [0, 0, 32];
-  this.groundRoughness = 0.02;
+  this.transparent = 0.0;
+  this.ri = 1.0;
+  this.groundColor = [80, 80, 80];
+  this.groundRoughness = 1;
   this.groundMetalness = 0.0;
-  this.time = 6.06;
+  this.time = 6.1;
   this.azimuth = 0.0;
+  this.lightRadius = 8.0;
+  this.lightIntensity = 1.0;
   this.width = 1280;
   this.height = 720;
   this.dofDist = 0.5;
   this.dofMag = 0.0;
-  this.samplesPerFrame = "1/9";
+  this.autoSample = true;
+  this.samplesPerFrame = 1;
   this.screenshot = function() {
     downloadCanvas("render-canvas", {
       name: "voxel",
@@ -208,7 +200,7 @@ const controls = new function() {
   };
   this.clear = function() {
     stage.clear();
-    stage.set(0, 0, 0, 0.5, 0.5, 0.5, 0, 0, 0, 0);
+    stage.set(0, 0, 0, 0.5, 0.5, 0.5, 0, 0, 0, 0, 1);
     stage.update();
     renderer.reset();
   };
@@ -242,6 +234,18 @@ gui.fMaterial
   .max(1.0)
   .step(0.01);
 gui.fMaterial
+  .add(controls, "transparent")
+  .name("Transparency")
+  .min(0.0)
+  .max(1.0)
+  .step(0.01);
+gui.fMaterial
+  .add(controls, "ri")
+  .name("Refractive Index")
+  .min(1.0)
+  .max(3.0)
+  .step(0.01);
+gui.fMaterial
   .add(controls, "emission")
   .name("Emission")
   .min(0.0)
@@ -273,7 +277,6 @@ gui.fSky
   .max(24.0)
   .step(0.01)
   .onChange(function() {
-    renderer.setSun(controls.time, controls.azimuth);
     renderer.reset();
   });
 gui.fSky
@@ -283,7 +286,20 @@ gui.fSky
   .max(2 * Math.PI)
   .step(0.01)
   .onChange(function() {
-    renderer.setSun(controls.time, controls.azimuth);
+    renderer.reset();
+  });
+gui.fSky
+  .add(controls, "lightRadius")
+  .name("Sun Radius")
+  .min(0.0)
+  .onChange(function() {
+    renderer.reset();
+  });
+gui.fSky
+  .add(controls, "lightIntensity")
+  .name("Sun Intensity")
+  .min(0.0)
+  .onChange(function() {
     renderer.reset();
   });
 
@@ -312,10 +328,12 @@ gui.fRender
   .min(0.0)
   .step(0.01)
   .onChange(renderer.reset);
+gui.fRender.add(controls, "autoSample");
 gui.fRender
-  .add(controls, "samplesPerFrame", Object.keys(samplings))
+  .add(controls, "samplesPerFrame")
   .name("Samples/Frame")
-  .onChange(configureSampling);
+  .min(1)
+  .listen();
 gui.fRender.add(controls, "screenshot").name("Take Screenshot");
 
 gui.fScene.add(controls, "save").name("Copy URL");
@@ -346,20 +364,6 @@ function reflow() {
     canvas.style.height = `${window.innerHeight}px`;
     canvas.style.width = `${Math.floor(aspect0 * window.innerHeight)}px`;
   }
-  configureSampling();
-}
-
-function configureSampling() {
-  const scale = samplings[controls.samplesPerFrame];
-  if (scale < 1) {
-    renderer.setSampling(
-      Math.floor(canvas.width * scale),
-      Math.floor(canvas.height * scale),
-      1
-    );
-  } else {
-    renderer.setSampling(canvas.width, canvas.height, scale);
-  }
 }
 
 function pack() {
@@ -375,7 +379,9 @@ function pack() {
     sky: {
       version: 0,
       time: controls.time,
-      azimuth: controls.azimuth
+      azimuth: controls.azimuth,
+      radius: controls.lightRadius,
+      intensity: controls.lightIntensity
     },
     dof: {
       dist: controls.dofDist,
@@ -391,6 +397,8 @@ function unpack(d) {
   camera.deserialize(data.camera);
   controls.time = data.sky.time;
   controls.azimuth = data.sky.azimuth;
+  controls.lightRadius = data.sky.radius;
+  controls.lightIntensity = data.sky.intensity;
   controls.groundColor = data.ground.color;
   controls.groundRoughness = data.ground.roughness;
   controls.groundMetalness = data.ground.metalness;
@@ -409,29 +417,58 @@ if (location.hash) {
   let x = 0;
   let y = 0;
   let z = 0;
-  stage.set(x, y, z, 1, 1, 1, 1, 0, 0, 0);
-  for (let i = 0; i < 10000; i++) {
+  stage.set(x, y, z, 1, 1, 1, 1, 0, 0, 0, 1);
+  let transparent = 1;
+  let ri = 1.5;
+  let rgb = [1, 1, 1];
+  let rough = 0.1;
+  for (let i = 0; i < 200; i++) {
     const n = [[1, 0], [-1, 0], [0, 1], [0, -1]][Math.floor(Math.random() * 4)];
     const x1 = x + n[0];
     const z1 = z + n[1];
     while (stage.get(x1, y, z1)) y++;
     x = x1;
     z = z1;
-    let rgb = [1, 1, 1];
-    stage.set(x, y, z, ...rgb, 1, 0, Math.random() < 0.1 ? 0.1 : 0.0, 0);
+    let emit = Math.random() < 0.1 && !transparent ? 2 : 0;
+    if (Math.random() < 0.1) {
+      if (transparent) {
+        transparent = 0;
+        ri = 1;
+        rgb = [1, 1, 1];
+        rough = 1;
+      } else {
+        emit = 0;
+        transparent = 1.0;
+        ri = Math.random() + 1;
+        rough = Math.random() * 0.1;
+        rgb = [Math.random(), Math.random(), Math.random()];
+      }
+    }
+    stage.set(x, y, z, ...rgb, 1, 0, emit, transparent, ri);
     while (stage.get(x, y - 1, z) === undefined && y > 0) {
       y--;
-      stage.set(x, y, z, 1, 1, 1, 1, 0, 0, 0);
+      stage.set(x, y, z, ...rgb, 1, 0, 0, 0, 1);
     }
   }
 }
 
-renderer.setSun(controls.time, controls.azimuth);
 renderer.reset();
 
 stage.update();
 
+let tLast = 0;
+
 function loop() {
+  if (controls.autoSample) {
+    const dt = performance.now() - tLast;
+    tLast = performance.now();
+    if (dt > 1000 / 30) {
+      controls.samplesPerFrame = Math.max(1, controls.samplesPerFrame - 1);
+    } else if (dt < 1000 / 60) {
+      controls.samplesPerFrame++;
+    }
+    // gui.updateDisplay();
+  }
   const b = stage.bounds;
   camera.center = vec3.scale([], [b.width, b.height, b.depth], 0.5);
   camera.radius = vec3.length([b.width, b.height, b.depth]) * 1.5;

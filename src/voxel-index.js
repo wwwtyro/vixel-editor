@@ -4,13 +4,15 @@ module.exports = class VoxelIndex {
   constructor() {
     this.aRGB = new Uint8Array(256 * 256 * 3);
     this.aRMET = new Float32Array(256 * 256 * 4);
+    this.aRi = new Float32Array(256 * 256 * 4);
     this.clear();
   }
 
   clear() {
     this.aRGB.fill(0);
     this.aRMET.fill(0);
-    this.x = 0;
+    this.aRi.fill(0);
+    this.x = 1;
     this.y = 0;
     this.keys = {};
   }
@@ -18,9 +20,9 @@ module.exports = class VoxelIndex {
   get(v) {
     const h = `${v.red} ${v.green} ${v.blue} ${v.rough} ${v.metal} ${v.emit} ${
       v.transparent
-    }`;
+    } ${v.ri}`;
     if (this.keys[h] === undefined) {
-      // It's cool that we're skipping the [0, 0] index, because that will be a shortcut for air.
+      // It's cool that we're skipping the first two indices, because those will be a shortcut for air and ground.
       this.x++;
       if (this.x > 255) {
         this.x = 0;
@@ -38,6 +40,7 @@ module.exports = class VoxelIndex {
       this.aRMET[i * 4 + 1] = v.metal;
       this.aRMET[i * 4 + 2] = v.emit;
       this.aRMET[i * 4 + 3] = v.transparent;
+      this.aRi[i * 4 + 0] = v.ri;
     }
     return this.keys[h];
   }
