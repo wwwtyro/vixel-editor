@@ -462,10 +462,11 @@ function loop() {
   if (controls.autoSample) {
     const dt = performance.now() - tLast;
     tLast = performance.now();
+
     if (dt > 1000 / 30) {
       controls.samplesPerFrame = Math.max(1, controls.samplesPerFrame - 1);
     } else if (dt < 1000 / 60) {
-      controls.samplesPerFrame++;
+      if (renderer.sampleCount() > 1) controls.samplesPerFrame++;
     }
     // gui.updateDisplay();
   }
