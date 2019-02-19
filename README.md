@@ -1,6 +1,6 @@
 # Vixel
 
-A javascript & webgl voxel path tracer. See it live [here](https://wwwtyro.github.io/vixel).
+A javascript & webgl voxel path tracer. See it live [here](https://wwwtyro.github.io/vixel-editor).
 
 ![vixel screenshot](media/screenshot-000.png)
 
